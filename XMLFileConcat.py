@@ -123,7 +123,11 @@ class XMLFileConcat:
                             yield(loadTree)
                         else:
                             not_match += 1
-
+    
+    def genFile(self):
+        for item in self.sourcePath.rglob('*.xml'):
+            if item.is_file():
+                yield(item)
 
 
 

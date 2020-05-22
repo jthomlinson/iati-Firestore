@@ -13,6 +13,25 @@ from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
 from datetime import datetime
 
+#class FirestoreLoader(object):
+#
+#    def __init__(self, db, schemas):
+#        self.db = db
+#        self.schemas = schemas
+#
+#
+#    def storeTree(self, tree):
+#        tree_ = bf.data(tree.getroot())
+#        if "iati-activities" in tree_:
+#            print('Prune activity')
+#    #        pruneTree(db, None, tree_, actXSD)
+#        elif "iati-organisations" in tree_:
+#            print('Prune organisation')
+#    #        pruneTree(db, None, tree_, orgXSD)
+#        else:
+#            pass
+
+
 def main(argv):
 #    deleteDocs()
 #    help(db)
@@ -136,7 +155,7 @@ def pruneTree(db, parentKey, parentValue, treeXSD, firestorePath = '', XsdPath =
                 doc_ref.set(listElement)
 #           Call pruneTree for each item in childDirect
                 for childKey, childValue in childDirect.items():
-                    if type(childValue) is list
+                    if type(childValue) is list:
                         f = pruneTreeWrapper(db, childKey, treeXSD, subcollectionPath + '/' + doc_ref.id + '/' + childKey, XsdPath + '/' + childKey)
                         with ThreadPool(processes = 50) as p:
                             p.map(f, childValue)
@@ -177,7 +196,7 @@ def pruneTree(db, parentKey, parentValue, treeXSD, firestorePath = '', XsdPath =
             doc_ref.set(parentValue)
     #           Call pruneTree for each item in childDirect
             for childKey, childValue in childDirect.items():
-                if type(childValue) is list
+                if type(childValue) is list:
                     f = pruneTreeWrapper(db, childKey, treeXSD, subcollectionPath + '/' + doc_ref.id + '/' + childKey, XsdPath + '/' + childKey)
                     with ThreadPool(processes = 50) as p:
                         p.map(f, childValue)
@@ -189,32 +208,83 @@ def pruneTree(db, parentKey, parentValue, treeXSD, firestorePath = '', XsdPath =
         print("Type not matched")
         exit(0)
 
-def storeTree(db, tree, actXSD, orgXSD):
-    tree_ = bf.data(tree.getroot())
-    if "iati-activities" in tree_:
-        pruneTree(db, None, tree_, actXSD)
-    elif "iati-organisations" in tree_:
-        pruneTree(db, None, tree_, orgXSD)
+def storeTree(item):
+    print(f'{item.name} start: {datetime.now()}')
+    actXSD = xmlschema.XMLSchema('/Users/john/Development/HumAI_data/Schema/iati-activities-schema.xsd')
+    orgXSD = xmlschema.XMLSchema('/Users/john/Development/HumAI_data/Schema/iati-organisations-schema.xsd')
+
+    db = firestore.Client()
+
+    try:
+        tree = ET.parse(item)
+    except xml.etree.ElementTree.ParseError as exp:
+        parse_error += 1
+        print('Parse error:', exp, file = sys.stderr)
     else:
-        pass
+        tree_ = bf.data(tree.getroot())
+        if "iati-activities" in tree_:
+            print('Prune activity ', item.name)
+    #        pruneTree(db, None, tree_, actXSD)
+        elif "iati-organisations" in tree_:
+            print('Prune organisation ', item.name)
+    #        pruneTree(db, None, tree_, orgXSD)
+        else:
+            pass
+    print(f'{item.name} end: {datetime.now()}')
 
 
-def storeTreeWrapper(db, actXSD, orgXSD):
-    f = lambda tree : storeTree(db, tree, actXSD, orgXSD)
-    return f
+#def storeTree(args):
+#    tree = args[0]
+#    tree_ = bf.data(tree.getroot())
+#    if "iati-activities" in tree_:
+#        print('Prune activity')
+##        pruneTree(db, None, tree_, actXSD)
+#    elif "iati-organisations" in tree_:
+#        print('Prune organisation')
+##        pruneTree(db, None, tree_, orgXSD)
+#    else:
+#        pass
+#
+#
+#def storeTreeWrapper(db, actXSD, orgXSD):
+#    f = lambda tree : storeTree(db, tree, actXSD, orgXSD)
+#    return f
+
+def myFunc(x, a, b):
+    return(f' {x} {a} {b} ')
+    
+def myFuncWrapper(a, b):
+    fx = lambda x: (myFunc(x, a, b))
+    return(fx)
+
 
 def loadDB():
-    actXSD = xmlschema.XMLSchema('/home/john/Development/HumAI_data/Schema/iati-activities-schema.xsd')
-    orgXSD = xmlschema.XMLSchema('/home/john/Development/HumAI_data/Schema/iati-organisations-schema.xsd')
-    path = xc.argToPath("/home/john/Development/HumAI_data/test_data/ManualTest_3")
-    
-    db = firestore.Client()
+#    actXSD = xmlschema.XMLSchema('/home/john/Development/HumAI_data/Schema/iati-activities-schema.xsd')
+#    orgXSD = xmlschema.XMLSchema('/home/john/Development/HumAI_data/Schema/iati-organisations-schema.xsd')
+#    path = xc.argToPath("/home/john/Development/HumAI_data/test_data/ManualTest_3")
+
+    path = xc.argToPath("/Users/john/Development/HumAI_data/test_data/ManualTest_3")
+
+
 
     fConcat = xc.XMLFileConcat(path, None, None, None)
 
-    f = storeTreeWrapper(db, actXSD, orgXSD)
-    with Pool(4) as p:
-        p.map(f, fConcat.genTree())
+#    fl = FirestoreLoader(db, {'iati-activities':actXSD, 'iati-organisations':orgXSD })
+
+    res_2 = []
+    vals = [5, 7, 11]
+
+    myF = myFuncWrapper(2,3)
+    
+    with Pool(5) as p:
+#        p.map(storeTree, fConcat.genTree(db, {'iati-activities':actXSD, 'iati-organisations':orgXSD }))
+        p.map(storeTree, fConcat.genFile())
+    print('Complete')
+
+
+#    f = storeTreeWrapper(db, actXSD, orgXSD)
+#    with Pool(4) as p:
+#        p.map(f, fConcat.genTree())
 
 '''
     for tree in fConcat.genTree():
